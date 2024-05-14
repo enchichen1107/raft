@@ -430,22 +430,38 @@ func (r *Raft) broadcastAppendEntries(ctx context.Context, appendEntriesResultCh
 		// Hint: set `req` with the correct fields (entries, prevLogId and prevLogTerm MUST be set)
 		// Hint: use `getLog` to get specific log, `getLogs` to get all logs after and include the specific log Id
 		// Log: r.logger.Debug("send append entries", zap.Uint32("peer", peerId), zap.Any("request", req), zap.Int("entries", len(entries)))
-		req := &pb.AppendEntriesRequest{}
+		req := &pb.AppendEntriesRequest{
+			Term:           r.currentTerm,
+			LeaderId:       r.id,
+			LeaderCommitId: r.commitIndex,
+		}
+
+		entries := r.getLogs(r.nextIndex[peerId])
+		prevLog := r.getLog(r.nextIndex[peerId] - 1)
+		if prevLog != nil {
+			req.Entries = entries
+			req.PrevLogId = prevLog.GetId()
+			req.PrevLogTerm = prevLog.GetTerm()
+		}
+
+		r.logger.Debug("send append entries", zap.Uint32("peer", peerId), zap.Any("request", req), zap.Int("entries", len(entries)))
 
 		// TODO: (A.14) & (B.6)
 		// Hint: modify the code to send `AppendEntries` RPCs in parallel
-		resp, err := peer.AppendEntries(ctx, req)
-		if err != nil {
-			r.logger.Error("fail to send AppendEntries RPC", zap.Error(err), zap.Uint32("peer", peerId))
-			// connection issue, should not be handled
-			return
-		}
+		go func() {
+			resp, err := peer.AppendEntries(ctx, req)
+			if err != nil {
+				r.logger.Error("fail to send AppendEntries RPC", zap.Error(err), zap.Uint32("peer", peerId))
+				// connection issue, should not be handled
+				return
+			}
 
-		appendEntriesResultCh <- &appendEntriesResult{
-			AppendEntriesResponse: resp,
-			req:                   req,
-			peerId:                peerId,
-		}
+			appendEntriesResultCh <- &appendEntriesResult{
+				AppendEntriesResponse: resp,
+				req:                   req,
+				peerId:                peerId,
+			}
+		}()
 	}
 }
 
