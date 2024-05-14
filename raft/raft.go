@@ -501,14 +501,27 @@ func (r *Raft) handleAppendEntriesResult(result *appendEntriesResult) {
 
 	logs := r.getLogs(r.commitIndex + 1)
 	for i := len(logs) - 1; i >= 0; i-- {
-		// TODO: (B.9) if there exiss an N such that N > commitIndex, a majority of matchIndex[i] >= N, and log[N].term == currentTerm: set commitIndex = N
+		// TODO: (B.9) if there exist an N such that N > commitIndex, a majority of matchIndex[i] >= N, and log[N].term == currentTerm: set commitIndex = N
 		// Hint: find if such N exists
 		// Hint: if such N exists, use `setCommitIndex` to set commit index
 		// Hint: if such N exists, use `applyLogs` to apply logs
+		if logs[i].GetTerm() != r.currentTerm {
+			continue
+		}
+
+		N := logs[i].GetId()
 
 		replicas := 1
+		for peerId := range r.peers {
+			if r.matchIndex[peerId] >= N {
+				replicas++
+			}
+		}
 
 		if replicas >= replicasNeeded {
+			r.setCommitIndex(N)
+			go r.applyLogs(r.applyCh)
+			break
 		}
 	}
 }
