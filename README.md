@@ -1,5 +1,12 @@
 # Raft
 
+## Verification
+
+```go
+go test -timeout 60s -race -count 1 ./...
+```
+![Alt text](./img/result.png?raw=true "test result")
+
 ## For Students of the NTHU CS5426 Distributed System Course
 
 In the final project, you are asked to implement the Raft consensus algorithm, also a replicated state machine protocol, as the [paper](https://raft.github.io/raft.pdf) described and learn to:
@@ -11,15 +18,7 @@ In the final project, you are asked to implement the Raft consensus algorithm, a
 
 The implementation will be divided into 2 parts: leader election, log replication.
 
-
-# Verification
-
-```go
-go test -timeout 60s -race -count 1 ./...
-```
-![Alt text](./img/result.png?raw=true "test result")
-
-# Future Work
+## Future Work
 
 There are many other works can be done to improve the Raft we designed, the following are some:
 
