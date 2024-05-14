@@ -264,6 +264,7 @@ func (r *Raft) runFollower(ctx context.Context) {
 func (r *Raft) handleFollowerHeartbeatTimeout() {
 	// TODO: (A.9) - if election timeout elapses without receiving AppendEntries RPC from current leader or granting vote to candidate: convert to candidate
 	// Hint: use `toCandidate` to convert to candidate
+	r.toCandidate()
 
 	r.logger.Info("heartbeat timeout, change state from follower to candidate")
 }
