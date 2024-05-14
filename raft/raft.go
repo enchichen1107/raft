@@ -327,10 +327,14 @@ func (r *Raft) voteForSelf(grantedVotes *int) {
 func (r *Raft) broadcastRequestVote(ctx context.Context, voteCh chan *voteResult) {
 	r.logger.Info("broadcast request vote", zap.Uint64("term", r.currentTerm))
 
+	lastLogId, lastLogTerm := r.getLastLog()
 	req := &pb.RequestVoteRequest{
 		// TODO: (A.11) - send RequestVote RPCs to all other servers (set all fields of `req`)
 		// Hint: use `getLastLog` to get the last log entry
-
+		Term:        r.currentTerm,
+		CandidateId: r.id,
+		LastLogId:   lastLogId,
+		LastLogTerm: lastLogTerm,
 	}
 
 	// TODO: (A.11) - send RequestVote RPCs to all other servers (modify the code to send `RequestVote` RPCs in parallel)
@@ -338,13 +342,15 @@ func (r *Raft) broadcastRequestVote(ctx context.Context, voteCh chan *voteResult
 		peerId := peerId
 		peer := peer
 
-		resp, err := peer.RequestVote(ctx, req)
-		if err != nil {
-			r.logger.Error("fail to send RequestVote RPC", zap.Error(err), zap.Uint32("peer", peerId))
-			return
-		}
+		go func() {
+			resp, err := peer.RequestVote(ctx, req)
+			if err != nil {
+				r.logger.Error("fail to send RequestVote RPC", zap.Error(err), zap.Uint32("peer", peerId))
+				return
+			}
 
-		voteCh <- &voteResult{RequestVoteResponse: resp, peerId: peerId}
+			voteCh <- &voteResult{RequestVoteResponse: resp, peerId: peerId}
+		}()
 	}
 }
 
