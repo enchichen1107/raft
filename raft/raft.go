@@ -315,9 +315,11 @@ func (r *Raft) runCandidate(ctx context.Context) {
 }
 
 func (r *Raft) voteForSelf(grantedVotes *int) {
-	// TODO: (A.10) increment currentTerm
+	// TODO: (A.10) increment currentTerm should be granted votes?
 	// TODO: (A.10) vote for self
 	// Hint: use `voteFor` to vote for self
+	(*grantedVotes)++
+	r.voteFor(r.id, true)
 
 	r.logger.Info("vote for self", zap.Uint64("term", r.currentTerm))
 }
@@ -328,6 +330,7 @@ func (r *Raft) broadcastRequestVote(ctx context.Context, voteCh chan *voteResult
 	req := &pb.RequestVoteRequest{
 		// TODO: (A.11) - send RequestVote RPCs to all other servers (set all fields of `req`)
 		// Hint: use `getLastLog` to get the last log entry
+
 	}
 
 	// TODO: (A.11) - send RequestVote RPCs to all other servers (modify the code to send `RequestVote` RPCs in parallel)
