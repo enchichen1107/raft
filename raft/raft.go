@@ -469,6 +469,11 @@ func (r *Raft) handleAppendEntriesResult(result *appendEntriesResult) {
 	// TODO: (A.15) - if RPC request or response contains term T > currentTerm: set currentTerm = T, convert to follower
 	// Hint: use `toFollower` to convert to follower
 	// Log: r.logger.Info("receive new term on AppendEntries response, fallback to follower", zap.Uint32("peer", result.peerId))
+	if result.GetTerm() > r.currentTerm {
+		r.toFollower(result.GetTerm())
+		r.logger.Info("receive new term on AppendEntries response, fallback to follower", zap.Uint32("peer", result.peerId))
+		return
+	}
 
 	entries := result.req.GetEntries()
 
@@ -476,10 +481,20 @@ func (r *Raft) handleAppendEntriesResult(result *appendEntriesResult) {
 		// TODO: (B.7) - if AppendEntries fails because of log inconsistency: decrease nextIndex and retry
 		// Hint: use `setNextAndMatchIndex` to decrease nextIndex
 		// Log: logger.Info("append entries failed, decrease next index", zap.Uint64("nextIndex", nextIndex), zap.Uint64("matchIndex", matchIndex))
+		nextIndex := r.nextIndex[result.peerId] - 1
+		matchIndex := r.matchIndex[result.peerId]
+		r.setNextAndMatchIndex(result.peerId, nextIndex, matchIndex)
+		r.logger.Info("append entries failed, decrease next index", zap.Uint64("nextIndex", nextIndex), zap.Uint64("matchIndex", matchIndex))
+
 	} else if len(entries) != 0 {
 		// TODO: (B.8) - if successful: update nextIndex and matchIndex for follower
 		// Hint: use `setNextAndMatchIndex` to update nextIndex and matchIndex
 		// Log: logger.Info("append entries successfully, set next index and match index", zap.Uint32("peer", result.peerId), zap.Uint64("nextIndex", nextIndex), zap.Uint64("matchIndex", matchIndex))
+		matchIndex := entries[len(entries)-1].GetId()
+		nextIndex := matchIndex + 1
+		r.setNextAndMatchIndex(result.peerId, nextIndex, matchIndex)
+		r.logger.Info("append entries successfully, set next index and match index", zap.Uint32("peer", result.peerId), zap.Uint64("nextIndex", nextIndex), zap.Uint64("matchIndex", matchIndex))
+
 	}
 
 	replicasNeeded := (len(r.peers)+1)/2 + 1
